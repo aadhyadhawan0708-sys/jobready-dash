@@ -1,5 +1,5 @@
 const API = "https://xbgqzsbwgmhnmqsuvzex.supabase.co/functions/v1/jr-dashboard";
-const AVATAR = "https://d8j0ntlcm91z4.cloudfront.net/user_3BQbHrxxEC3X18uZ2XM26HizECM/hf_20261102_180129_b4c8ab9a-6101-4e91-a045-4a323d55ed12.png";
+const AVATAR = "icons/avatar.jpg";
 const SRC = {meta:"Meta ads",whatsapp:"WhatsApp",lms_app:"LMS app",email:"Email",google:"Google",chatgpt:"ChatGPT",other:"Other tagged",untagged:"Untagged"};
 const $ = (id) => document.getElementById(id);
 const inr = (v) => v == null ? "–" : "₹" + Math.round(v).toLocaleString("en-IN");
