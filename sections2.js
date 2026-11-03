@@ -62,9 +62,10 @@ async function showSection(name) {
   $("sec").classList.toggle("hidden", ov);
   if (ov) return load();
   const el = $("sec");
+  $("errs").innerHTML = "";
   el.innerHTML = `<div class="empty pad">Loading ${SECTIONS[name]}…</div>`;
   $("refreshBtn").classList.add("spin");
   try { await VIEWS[name](el); }
-  catch (e) { if (e.status === 401) return lock(); el.innerHTML = `<div class="err">Couldn't load ${SECTIONS[name]}: ${esc(e.message)}</div>`; }
+  catch (e) { if (e.status === 401) return lock(); el.innerHTML = ""; showErr(e); }
   finally { $("refreshBtn").classList.remove("spin"); }
 }
