@@ -50,8 +50,9 @@
   <div id="errs"></div>
   <div id="sec" class="hidden"></div>
   <div class="grid" id="ovGrid">
+    <div class="card daybar"><label for="dayIn">Day</label><input type="date" id="dayIn"><button class="btn sm ghost" id="prevDay" title="Previous day">‹</button><button class="btn sm ghost" id="nextDay" title="Next day">›</button><button class="btn sm" id="todayBtn">Today · live</button><span class="muted" id="dayNote"></span></div>
     <div class="card c8">
-      <h2>Banked today <span id="todayLbl"></span></h2>
+      <h2 id="bankedH">Banked today <span id="todayLbl"></span></h2>
       <div class="hero">
         <div><div class="big num" id="banked">–</div><div class="delta num" id="vsY"></div></div>
         <div style="text-align:right"><div class="chip" id="liveChip">live Razorpay</div></div>
@@ -71,19 +72,19 @@
       <div class="kpis" id="kpis"></div>
     </div>
 
-    <div class="card c6"><h2>Banked by source · today <span>last click</span></h2><div class="rows" id="sources"></div></div>
-    <div class="card c6"><h2>Today vs yesterday <span>cumulative, IST</span></h2><div id="hourly"></div>
-      <div class="legend"><span><i style="background:var(--accent)"></i>Today</span><span><i style="background:var(--faint)"></i>Yesterday</span></div></div>
+    <div class="card c6"><h2>Banked by source · <em class="dw">today</em> <span>last click</span></h2><div class="rows" id="sources"></div></div>
+    <div class="card c6"><h2><em class="dw">Today</em> vs day before <span>cumulative, IST</span></h2><div id="hourly"></div>
+      <div class="legend"><span><i style="background:var(--accent)"></i>This day</span><span><i style="background:var(--faint)"></i>Day before</span></div></div>
 
-    <div class="card"><h2>Last 14 days <span>banked vs Meta spend + GST</span></h2><div id="trend"></div>
+    <div class="card"><h2>14 days to <em class="dw">today</em> <span>banked vs Meta spend + GST</span></h2><div id="trend"></div>
       <div class="legend"><span><i style="background:var(--accent)"></i>Banked</span><span><i style="background:var(--blue)"></i>Spend × 1.18</span></div></div>
 
-    <div class="card c6"><h2>Top courses today</h2><div id="courses"></div></div>
-    <div class="card c6"><h2>Meta campaigns today <span id="metaSt"></span></h2><div id="camps"></div></div>
+    <div class="card c6"><h2>Top courses · <em class="dw">today</em></h2><div id="courses"></div></div>
+    <div class="card c6"><h2>Meta campaigns · <em class="dw">today</em> <span id="metaSt"></span></h2><div id="camps"></div></div>
 
     <div class="card c4"><h2>WhatsApp</h2><div id="wa"></div></div>
     <div class="card c4"><h2>Email <span>Mandrill, all products</span></h2><div id="email"></div></div>
-    <div class="card c4"><h2>Payments failing today</h2><div id="fails"></div></div>
+    <div class="card c4"><h2>Payments failing · <em class="dw">today</em></h2><div id="fails"></div></div>
 
     <div class="card"><h2>LMS <span>BeepLearn</span></h2><div class="kpis lms" id="lms"></div></div>
   </div>

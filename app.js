@@ -11,7 +11,25 @@ const store = { get(k){ try { return localStorage.getItem(k) } catch { return nu
 const sess = { get(k){ try { return sessionStorage.getItem(k) } catch { return null } }, set(k,v){ try { sessionStorage.setItem(k,v) } catch {} }, del(k){ try { sessionStorage.removeItem(k) } catch {} } };
 const RELOCK_MS = 10 * 60 * 1000;
 
-let token = null, timer = null, last = null, hiddenAt = 0;
+let token = null, timer = null, last = null, hiddenAt = 0, viewDay = null; // viewDay null = today, live
+const DAY_API = "https://xbgqzsbwgmhnmqsuvzex.supabase.co/functions/v1/jr-dash-day";
+const istToday = () => new Date(Date.now() + 19800e3).toISOString().slice(0, 10);
+async function dayData(day) {
+  const r = await fetch(DAY_API, { method: "POST", headers: { "content-type": "application/json", authorization: "Bearer " + token }, body: JSON.stringify({ day }) });
+  const j = await r.json().catch(() => ({ error: "bad_response" }));
+  if (!r.ok) { const e = new Error(j.error || "http " + r.status); e.status = r.status; throw e; }
+  return j;
+}
+function setDay(day) {
+  const t = istToday();
+  if (!day || day >= t) day = null;
+  viewDay = day;
+  $("dayIn").value = day || t; $("dayIn").max = t;
+  $("todayBtn").classList.toggle("ghost", !!day);
+  $("nextDay").disabled = !day;
+  load(true);
+}
+const shiftDay = (n) => { const d = new Date((viewDay || istToday()) + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() + n); setDay(d.toISOString().slice(0, 10)); };
 
 async function call(a, body = {}, auth = false) {
   const r = await fetch(API + "?a=" + a, { method: "POST", headers: { "content-type": "application/json", ...(auth && token ? { authorization: "Bearer " + token } : {}) }, body: JSON.stringify(body) });
@@ -73,12 +91,12 @@ function openApp() {
   show("app");
   showSection(SECTIONS[store.get("jr_tab")] ? store.get("jr_tab") : "overview");
   clearInterval(timer);
-  timer = setInterval(() => { if (!document.hidden && current === "overview") load(); }, 60000);
+  timer = setInterval(() => { if (!document.hidden && current === "overview" && !viewDay) load(); }, 60000);
 }
 
 async function load(force = false) {
   $("refreshBtn").classList.add("spin");
-  try { last = await call("data", { force }, true); render(last); }
+  try { last = viewDay ? await dayData(viewDay) : await call("data", { force }, true); render(last); }
   catch (e) { if (e.status === 401) return lock(); showErr(e); }
   finally { $("refreshBtn").classList.remove("spin"); }
 }
@@ -102,6 +120,12 @@ $("setupBtn").onclick = setup;
 $("addDeviceBtn").onclick = () => { $("setupBox").classList.remove("hidden"); $("addDeviceBtn").classList.add("hidden"); };
 $("refreshBtn").onclick = () => current === "overview" ? load(true) : showSection(current);
 $("lockBtn").onclick = lock;
+$("dayIn").max = istToday(); $("dayIn").value = istToday();
+$("dayIn").onchange = (e) => setDay(e.target.value);
+$("todayBtn").onclick = () => setDay(null);
+$("prevDay").onclick = () => shiftDay(-1);
+$("nextDay").onclick = () => shiftDay(1);
+$("nextDay").disabled = true;
 $("menuBtn").onclick = () => document.body.classList.toggle("nav-open");
 $("scrim").onclick = () => document.body.classList.remove("nav-open");
 document.querySelectorAll(".nav a").forEach((a) => (a.onclick = (e) => { e.preventDefault(); showSection(a.dataset.s); }));
@@ -109,7 +133,7 @@ document.addEventListener("visibilitychange", () => {
   if (document.hidden) { hiddenAt = Date.now(); return; }
   if (!token) return;
   if (tokenExp(token) < Date.now() || (hiddenAt && Date.now() - hiddenAt > RELOCK_MS)) return lock();
-  if (current === "overview") load();
+  if (current === "overview" && !viewDay) load();
 });
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 initLock();

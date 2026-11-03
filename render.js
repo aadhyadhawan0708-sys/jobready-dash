@@ -3,19 +3,24 @@ function render(d) {
   $("dot").classList.toggle("stale", !d.live_razorpay);
   $("updated").textContent = new Date(d.at).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" });
   $("errs").innerHTML = d.errors?.length ? `<div class="err">${d.errors.map(esc).join("<br>")}</div>` : "";
-  $("liveChip").textContent = d.live_razorpay ? "live Razorpay" : "ledger (≤2h old)";
+  const past = !!d.is_past, dLbl = new Date(d.today + "T00:00:00").toLocaleDateString("en-IN", { day: "numeric", month: "short" });
+  document.querySelectorAll(".dw").forEach((e) => { e.dataset.o ??= e.textContent; e.textContent = past ? dLbl : e.dataset.o; });
+  $("bankedH").firstChild.textContent = past ? "Banked " : "Banked today ";
+  $("liveChip").textContent = past ? "full day · Razorpay ledger" : d.live_razorpay ? "live Razorpay" : "ledger (≤2h old)";
+  $("dayNote").textContent = past ? "Viewing a past day. Meta spend is as last synced; email stats are only kept for today." : "";
   $("todayLbl").textContent = new Date(d.today + "T00:00:00").toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
 
   $("banked").textContent = inr(t.banked);
   const diff = t.banked - t.yesterday_same_time;
   const dp = t.yesterday_same_time ? diff / t.yesterday_same_time : null;
-  $("vsY").innerHTML = `<span class="${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "▲" : "▼"} ${inr(Math.abs(diff))}${dp != null ? " (" + pct(Math.abs(dp)) + ")" : ""}</span> vs yesterday by now · yesterday closed ${inr(t.yesterday_total)}`;
+  $("vsY").innerHTML = `<span class="${diff >= 0 ? "up" : "down"}">${diff >= 0 ? "▲" : "▼"} ${inr(Math.abs(diff))}${dp != null ? " (" + pct(Math.abs(dp)) + ")" : ""}</span> ${past ? "vs the day before (" + inr(t.yesterday_total) + ")" : "vs yesterday by now · yesterday closed " + inr(t.yesterday_total)}`;
   const dayFrac = ((Date.now() / 1000 + 19800) % 86400) / 86400;
   const goal = tg.daily_inr || 100000;
   $("tgtBar").style.width = Math.min(100, t.banked / goal * 100) + "%";
   $("tgtPace").style.left = Math.min(100, dayFrac * 100) + "%";
+  $("tgtPace").style.display = past ? "none" : "";
   $("tgtL").textContent = pct(t.banked / goal) + " of " + inrK(goal) + " day target";
-  $("tgtR").textContent = (goal - t.banked > 0 ? inr(goal - t.banked) + " to go" : "target hit");
+  $("tgtR").textContent = goal - t.banked > 0 ? (past ? inr(goal - t.banked) + " short" : inr(goal - t.banked) + " to go") : "target hit";
 
   $("mLbl").textContent = new Date(m.start + "T00:00:00").toLocaleDateString("en-IN", { month: "long" });
   $("mtd").textContent = inrK(m.banked);
@@ -37,7 +42,7 @@ function render(d) {
   const max = Math.max(1, ...srcs.map(([, v]) => v.inr));
   $("sources").innerHTML = srcs.length ? srcs.map(([k, v]) => `<div class="row"><div class="nm"><i style="background:var(--s-${k})"></i>${SRC[k] || esc(k)}</div><div class="track"><i style="width:${v.inr / max * 100}%;background:var(--s-${k})"></i></div><div class="val num">${inr(v.inr)}<small>${v.orders} · ${pct(v.inr / Math.max(1, t.banked))}</small></div></div>`).join("") : `<div class="empty">No captured payments yet today.</div>`;
 
-  $("hourly").innerHTML = lineChart(d.hourly.today, d.hourly.yesterday);
+  $("hourly").innerHTML = lineChart(d.hourly.today, d.hourly.yesterday, past ? 23 : null);
   $("trend").innerHTML = trendChart(d.trend, tg.gst || 1.18);
 
   $("courses").innerHTML = table(["Course", "Orders", "Banked"], d.by_course_today.map((c) => [esc(c.course.replace(/-/g, " ")), c.orders, inr(c.inr)]));
@@ -50,16 +55,16 @@ function render(d) {
   $("wa").innerHTML = kv([["Banked today", inr(waSrc.inr) + ` <small class="chip">${waSrc.orders} order${waSrc.orders === 1 ? "" : "s"}</small>`], ["Gupshup wallet", wa.wallet == null ? "–" : inr(Number(wa.wallet))], ...(wa.sends_today || []).map((s) => ["Sent · " + esc(s.flow), s.n])])
     + subTable(d.owned_campaigns_today.filter((c) => c.src === "whatsapp"));
   const em = d.email || {}; const emSrc = d.by_source_today.email || { inr: 0, orders: 0 };
-  $("email").innerHTML = kv([["Banked today", inr(emSrc.inr) + ` <small class="chip">${emSrc.orders} order${emSrc.orders === 1 ? "" : "s"}</small>`], ...(em.connected ? [["Sent today", (em.today.sent || 0).toLocaleString("en-IN")], ["Opens / clicks", (em.today.opens || 0) + " / " + (em.today.clicks || 0)], ["Reputation", em.reputation ?? "–"]] : [["Mandrill", "not connected"]])])
+  $("email").innerHTML = kv([["Banked today", inr(emSrc.inr) + ` <small class="chip">${emSrc.orders} order${emSrc.orders === 1 ? "" : "s"}</small>`], ...(em.connected ? [["Sent today", (em.today.sent || 0).toLocaleString("en-IN")], ["Opens / clicks", (em.today.opens || 0) + " / " + (em.today.clicks || 0)], ["Reputation", em.reputation ?? "–"]] : [["Mandrill", em.past_day ? "today only" : "not connected"]])])
     + subTable(d.owned_campaigns_today.filter((c) => c.src === "email"));
   $("fails").innerHTML = kv([["Failed payments", t.failed], ["Value", inr(t.failed_inr)]]) + (d.fail_reasons_today.length ? table(["Reason", "#"], d.fail_reasons_today.map((r) => [esc(r.reason), r.n])) : "");
 
   const l = d.lms;
   $("lms").innerHTML = l ? [
-    ["Enrolments today", l.enrol_today, "paid courses, packs count per course"],
-    ["Started learning", pct(l.enrol_mtd ? l.started_mtd / l.enrol_mtd : null), `${l.started_mtd} of ${l.enrol_mtd} this month · goal 65%`],
+    [past ? "Enrolments · " + dLbl : "Enrolments today", l.enrol_today, "paid courses, packs count per course"],
+    ["Started learning", pct(l.enrol_mtd ? l.started_mtd / l.enrol_mtd : null), `${l.started_mtd} of ${l.enrol_mtd} ${past ? "that month" : "this month"} · goal 65%`],
     ["Reached 50%", pct(l.enrol_mtd ? l.half_mtd / l.enrol_mtd : null, 1), `${l.half_mtd} this month · goal 6%`],
-    ["Active learners today", l.active_today, l.live_courses + " live courses"],
+    [past ? "Active learners · " + dLbl : "Active learners today", l.active_today, l.live_courses + " live courses"],
     ["Rating · 30 days", l.rating_30d ?? "–", l.ratings_30d + " ratings · goal 4.2"],
     ["Completed", l.completed_mtd, "this month's enrolments"],
   ].map(([a, v, s]) => `<div class="kpi"><div class="l">${a}</div><div class="v num">${v}</div><div class="s">${s}</div></div>`).join("") : `<div class="empty">LMS unavailable.</div>`;
@@ -68,8 +73,8 @@ const kv = (rows) => `<div class="rows" style="gap:8px;margin-bottom:10px">${row
 const table = (h, rows) => rows.length ? `<table><tr>${h.map((x) => `<th>${x}</th>`).join("")}</tr>${rows.map((r) => `<tr>${r.map((c) => `<td class="num">${c}</td>`).join("")}</tr>`).join("")}</table>` : `<div class="empty">Nothing yet today.</div>`;
 const subTable = (rows) => rows.length ? table(["Campaign", "Orders", "Banked"], rows.map((c) => [esc(c.campaign), c.orders, inr(c.inr)])) : "";
 
-function lineChart(a, b) {
-  const W = 560, H = 190, P = 26, nowH = new Date(Date.now() + 19800e3).getUTCHours();
+function lineChart(a, b, endH = null) {
+  const W = 560, H = 190, P = 26, nowH = endH ?? new Date(Date.now() + 19800e3).getUTCHours();
   const max = Math.max(1, ...a, ...b) * 1.08;
   const x = (i) => P + i * (W - P - 6) / 23, y = (v) => H - 20 - v / max * (H - 34);
   const path = (arr, upto) => arr.slice(0, upto + 1).map((v, i) => (i ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1)).join("");
